@@ -1,0 +1,3 @@
+Random scripts I'm using to export my data.
+
+Scripts in this repository are probably too short to deserve a separate repository...
