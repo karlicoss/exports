@@ -8,11 +8,11 @@ import twint # type: ignore
 
 # TODO FIXME error handling??
 def export_all(*, cfg: twint.Config) -> None:
+    twint.run.Search(cfg)
+    twint.run.Favorites(cfg)
     # TODO what happens when followers/following change??
     twint.run.Followers(cfg)
     twint.run.Following(cfg)
-    twint.run.Favorites(cfg)
-    twint.run.Search(cfg)
 
 
 def main():
@@ -26,6 +26,7 @@ def main():
 
 
     cfg = twint.Config()
+    cfg.Hide_output = True
     cfg.Limit = args.limit
     cfg.Username = args.username
     cfg.Database = args.database
