@@ -10,12 +10,14 @@ NOTE:
 from pathlib import Path
 import logging
 import subprocess
+import sys
 
 
 def run(*, device: str, to: Path) -> None:
     logger = logging.getLogger()
     cmd = [
         'rsync',
+        '--timeout', '5',
         '-av',
         '--delete',
         '--exclude', '.entware', '--delete-excluded',
@@ -24,7 +26,13 @@ def run(*, device: str, to: Path) -> None:
         str(to),
     ]
     logger.info('Running: %s', cmd)
-    subprocess.run(cmd) # NOTE: deliberately not using check_call, because remarkable might go to sleep while rsync is running?
+    res = subprocess.run(cmd, stderr=subprocess.PIPE)
+    err = res.stderr.decode('utf8')
+    sys.stderr.write(err)
+    if 'No route to host' in err:
+        # device must be offline, ignore
+        return
+    res.check_returncode()
 
 
 def main() -> None:
