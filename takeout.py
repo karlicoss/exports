@@ -14,7 +14,7 @@ from subprocess import check_call
 import sys
 
 
-def get_logger():
+def get_logger() -> logging.Logger:
     return logging.getLogger('takeout-grabber')
 
 
@@ -24,20 +24,23 @@ def rclone_mount(remote: str):
     from tempfile import mkdtemp
     from subprocess import Popen, check_call
     import time
-    td = Path(mkdtemp())
+    # todo kinda annoying that it creates a dir visible from the outside of the process..
+    td = Path(mkdtemp(prefix='takeout_'))
     try:
         cmd = ['rclone', 'mount', '--drive-use-trash=false', f'{remote}:/', str(td)]
         logger.info('%s', cmd)
         with Popen(cmd) as p:
+            # need to give it a bit of time to mount
+            for _ in range(10):
+                time.sleep(0.5)
+                if len(list(td.iterdir())) > 0:
+                    break
+                # rclone shouldn't terminate by that point
+                assert p.poll() is None, 'Seems that rclone failed'
+                logger.info('waiting for directory to mount...')
+            else:
+                raise RuntimeError('No files')
             try:
-                # need to give it a bit of time to mount
-                for _ in range(10):
-                    time.sleep(0.5)
-                    if len(list(td.iterdir())) > 0:
-                        break
-                    logger.info('waiting for directory to mount...')
-                else:
-                    raise RuntimeError('No files')
                 yield td
             finally:
                 check_call(['fusermount', '-u', str(td)])
@@ -48,7 +51,7 @@ def rclone_mount(remote: str):
         td.rmdir()
 
 
-def run(*, rclone_remote: str, to: Path):
+def run(*, rclone_remote: str, to: Path) -> None:
     logger = get_logger()
     with rclone_mount(remote=rclone_remote) as mount:
         # sometimes takeout end up in weird paths... e.g.  'Takeout (7971cc47)'
@@ -61,7 +64,7 @@ def run(*, rclone_remote: str, to: Path):
             move(t, to / t.name)
 
 
-def main():
+def main() -> None:
     logging.basicConfig(level=logging.INFO)
    
     from argparse import ArgumentParser as P
