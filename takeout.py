@@ -55,13 +55,22 @@ def run(*, rclone_remote: str, to: Path) -> None:
     logger = get_logger()
     with rclone_mount(remote=rclone_remote) as mount:
         # sometimes takeout end up in weird paths... e.g.  'Takeout (7971cc47)'
-        takeouts = list(mount.glob('Takeout*/takeout-*.zip'))
-        if len(takeouts) == 0:
-            logger.info('no new takeouts!')
-        for t in takeouts:
-            # TODO check for free space?
-            logger.info('grabbing %r', t)
-            move(t, to / t.name)
+        # in addition, sometimes in google drive it ends up with two Takeout directories (since google drive allows dupe names)
+        # but seems like a random one may be mounted since obviously unix wouldn't allow identical names
+        # so I guess the idea is at least the script will grab it on the second run or something
+        takeout_dirs = list(mount.glob('Takeout*/'))
+        for takeout_dir in takeout_dirs:
+            logger.info(f'processing {takeout_dir}')
+            takeouts = list(takeout_dir.glob('takeout-*.zip'))
+            if len(takeouts) == 0:
+                logger.info('no new takeouts!')
+            for t in takeouts:
+                # TODO check for free space?
+                logger.info('grabbing %r', t)
+                move(t, to / t.name)
+
+            # this should error if the dir isn't empty for some reason
+            takeout_dir.rmdir()
 
 
 def main() -> None:
